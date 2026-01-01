@@ -43,8 +43,22 @@ class NetconfDeviceSimulator:
         # This dictionary will store our fake device configuration
         # When a controller configures an interface, we'll store it here
         # When it requests configuration, we'll return what's stored here
+        # Start with some sample interfaces for testing
         self.device_config = {
-            'interfaces': {}
+            'interfaces': {
+                'GigabitEthernet0/0': {
+                    'ipv4': {
+                        'ip': '192.168.1.1',
+                        'netmask': '255.255.255.0'
+                    }
+                },
+                'GigabitEthernet0/1': {
+                    'ipv4': {
+                        'ip': '10.0.0.1',
+                        'netmask': '255.255.0.0'
+                    }
+                }
+            }
         }
 
     def start(self):
@@ -205,11 +219,12 @@ class NetconfDeviceSimulator:
         """
         # This XML structure is defined by RFC 6241
         # The capabilities list tells the client what we support
+        # NOTE: We only advertise NETCONF 1.0 because we only implement
+        # the ]]>]]> framing style, not the chunked framing of 1.1
         hello = '''<?xml version="1.0" encoding="UTF-8"?>
 <hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
     <capabilities>
         <capability>urn:ietf:params:netconf:base:1.0</capability>
-        <capability>urn:ietf:params:netconf:base:1.1</capability>
         <capability>urn:ietf:params:netconf:capability:writable-running:1.0</capability>
         <capability>urn:ietf:params:netconf:capability:candidate:1.0</capability>
         <capability>urn:ietf:params:netconf:capability:confirmed-commit:1.0</capability>
@@ -292,16 +307,16 @@ class NetconfDeviceSimulator:
         # Simple string matching to determine the operation
         # A production implementation would use proper XML parsing
 
-        if '<get-config>' in rpc_request:
+        if 'get-config>' in rpc_request:
             return self._handle_get_config(rpc_request)
 
-        elif '<edit-config>' in rpc_request:
+        elif 'edit-config>' in rpc_request:
             return self._handle_edit_config(rpc_request)
 
-        elif '<commit' in rpc_request or '<commit/>' in rpc_request:
+        elif 'commit' in rpc_request:
             return self._handle_commit(rpc_request)
 
-        elif '<close-session' in rpc_request:
+        elif 'close-session' in rpc_request:
             return self._handle_close_session(rpc_request)
 
         else:
