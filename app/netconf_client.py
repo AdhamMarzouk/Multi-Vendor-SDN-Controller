@@ -108,6 +108,7 @@ class NetconfClient:
         
         try:
             self.connection.close_session()
+            self.connection = None
         except Exception as e:
             print(f"Unexpected error happened while closing the connection: {e}")
             raise
