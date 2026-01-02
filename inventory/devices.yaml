@@ -1,8 +1,16 @@
 devices:
-  - hostname: simulator-01
+  - hostname: router-01
     ip: 127.0.0.1
     port: 8300
     username: admin
     password: admin
     vendor: generic
-    description: "Local NETCONF simulator for development"
+    description: "Local NETCONF simulator for a router device"
+
+  - hostname: switch-01
+    ip: 127.0.0.1
+    port: 8400
+    username: admin
+    password: admin
+    vendor: generic
+    description: "Local NETCONF simulator for a switch device"
