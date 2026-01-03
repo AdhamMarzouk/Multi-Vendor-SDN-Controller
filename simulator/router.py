@@ -622,7 +622,7 @@ if __name__ == '__main__':
     print()
     
     simulator = NetconfDeviceSimulator(
-        listen_address='127.0.0.1',  # Only accept local connections
+        listen_address='0.0.0.0',    # Accept connections from all interfaces (Docker-friendly)
         listen_port=8300             # Non-standard port to avoid conflicts
     )
     

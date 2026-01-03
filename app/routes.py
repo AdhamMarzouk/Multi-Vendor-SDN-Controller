@@ -1,8 +1,11 @@
+import os
 from flask import request, jsonify, Blueprint
 from datetime import datetime, timezone
 from .controller import sdn_controller
 
-controller = sdn_controller(inventory_path='inventory/devices.yaml')
+# Read inventory path from environment variable, default to local development
+INVENTORY_PATH = os.getenv('INVENTORY_PATH', 'inventory/devices.yaml')
+controller = sdn_controller(inventory_path=INVENTORY_PATH)
 api_bp = Blueprint('api', __name__, url_prefix="/api")
 
 @api_bp.route("/discover", methods=['POST'])

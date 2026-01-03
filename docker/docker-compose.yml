@@ -1,0 +1,41 @@
+services:
+  netconf-simulator:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.simulator
+
+    container_name: netconf-simulator
+
+    expose:
+      - 8300
+      - 8400
+
+    networks:
+      - sdn-network
+
+    restart: unless-stopped
+
+  sdn-controller:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.app
+
+    container_name: sdn-controller
+
+    ports:
+      - "5000:5000"
+
+    environment:
+      - INVENTORY_PATH=inventory/devices.docker.yaml
+
+    depends_on:
+      - netconf-simulator
+
+    networks:
+      - sdn-network
+
+    restart: unless-stopped
+
+networks:
+  sdn-network:
+    driver: bridge

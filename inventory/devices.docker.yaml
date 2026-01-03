@@ -1,0 +1,16 @@
+devices:
+  - hostname: router-01
+    ip: netconf-simulator
+    port: 8300
+    username: admin
+    password: admin
+    vendor: generic
+    description: "NETCONF simulator for a router device (Docker)"
+
+  - hostname: switch-01
+    ip: netconf-simulator
+    port: 8400
+    username: admin
+    password: admin
+    vendor: generic
+    description: "NETCONF simulator for a switch device (Docker)"
