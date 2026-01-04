@@ -56,13 +56,11 @@ This SDN controller eliminates manual CLI-based network configuration by leverag
 - **Automated Discovery**: Connects to all devices in inventory via NETCONF protocol
 - **Capability Negotiation**: Retrieves and parses NETCONF capabilities for each device
 - **Multi-Vendor Support**: Vendor-agnostic approach using standard YANG models
-- **Connection Health Monitoring**: Real-time connectivity status and error handling
 
 ### Configuration Management
 
 - **Dynamic Interface Configuration**: Programmatically configure IP addressing and subnet masks
 - **Running Configuration Retrieval**: Fetch and parse current device state using NETCONF get-config
-- **Candidate Configuration Support**: Edit candidate datastore with commit/rollback capability
 - **XML Configuration Templating**: Generate YANG-compliant configuration from user input
 
 ### Monitoring & Status
@@ -412,142 +410,6 @@ pkill -f run.py
 
 ---
 
-## Key Technical Challenges Solved
-
-### 1. NETCONF Protocol Implementation from Scratch
-
-**Challenge:**
-No readily available NETCONF server simulators existed for testing, and using physical network devices was impractical for rapid development iteration. Required deep understanding of NETCONF protocol specifications and SSH subsystem architecture.
-
-**Solution:**
-Built custom NETCONF device simulators using Python's Paramiko library, implementing RFC 6241 specifications:
-- SSH server with NETCONF subsystem support
-- NETCONF 1.0 framing mechanism (`]]>]]>` delimiter)
-- RPC message parsing and response generation
-- YANG model simulation for ietf-interfaces and ietf-ip
-- Candidate and running datastore management
-
-**Impact:**
-- Enabled completely offline development and testing
-- Reduced development cycle time by eliminating hardware dependencies
-- Created reusable test infrastructure for CI/CD pipelines
-- Demonstrated deep protocol-level understanding
-
-**File Reference:** [server/simulator/router.py](server/simulator/router.py) (629 lines of extensively documented code)
-
-### 2. XML Namespace Handling in YANG Models
-
-**Challenge:**
-NETCONF responses use complex XML structures with multiple namespaces (ietf-interfaces, ietf-ip, iana-if-type). Standard XML parsing fails without proper namespace handling, and extracting nested data requires XPath queries across namespace boundaries.
-
-**Solution:**
-Implemented robust XML parsing using Python's ElementTree with namespace dictionaries:
-```python
-namespaces = {
-    'if': 'urn:ietf:params:xml:ns:yang:ietf-interfaces',
-    'ip': 'urn:ietf:params:xml:ns:yang:ietf-ip'
-}
-root.findall('.//if:interface', namespaces)
-```
-- Created reusable namespace mapping for IETF standard models
-- Used XPath queries with namespace prefixes for data extraction
-- Handled optional elements and nested structures gracefully
-
-**Learning:**
-Deep dive into YANG data modeling, XML schema design, and the relationship between YANG modules and XML encoding.
-
-**File Reference:** [server/app/controller.py:135-189](server/app/controller.py) - `_parse_running_config()` method
-
-### 3. Asynchronous State Management Across Network Boundaries
-
-**Challenge:**
-Coordinating frontend React state updates with backend NETCONF operations that involve SSH connections and network round-trips. NETCONF operations can take several seconds, requiring proper loading states and error handling in the UI.
-
-**Solution:**
-Designed RESTful API with optimistic UI updates and error rollback mechanisms:
-- React `useState` hooks for local state management
-- `async/await` patterns for API calls with proper error boundaries
-- Loading indicators during network operations
-- Validation feedback before API submission
-- Graceful error handling with user-friendly messages
-
-**Pattern:**
-```javascript
-const [isSaving, setIsSaving] = useState(false);
-const handleSave = async () => {
-  setIsSaving(true);
-  try {
-    await fetch('/api/device/interface', {...});
-    // Update local state on success
-  } catch (error) {
-    // Rollback UI state on failure
-  } finally {
-    setIsSaving(false);
-  }
-};
-```
-
-### 4. Docker Networking for NETCONF Communication
-
-**Challenge:**
-Establishing SSH/NETCONF communication between Docker containers while maintaining separation between development and production environments. Container networking requires service discovery and proper hostname resolution.
-
-**Solution:**
-Implemented Docker Compose bridge networks with environment-based configuration:
-- Created custom bridge network (`sdn-network`) for inter-container communication
-- Used Docker service names as hostnames (e.g., `netconf-simulator`)
-- Environment variable (`INVENTORY_PATH`) to switch between inventories:
-  - Local development: `devices.yaml` (connects to `127.0.0.1`)
-  - Docker environment: `devices.docker.yaml` (connects to `netconf-simulator`)
-- Proper dependency management with `depends_on` directive
-
-**File Reference:** [server/docker/docker-compose.yml](server/docker/docker-compose.yml)
-
----
-
-## What I Learned
-
-### Network Protocols & Standards
-
-- **NETCONF Protocol Architecture**: Deep understanding of RFC 6241, including transport layer (SSH subsystem), operations layer (get-config, edit-config, commit), and content layer (XML-encoded data)
-- **YANG Data Modeling**: Working with ietf-interfaces and ietf-ip modules, understanding YANG-to-XML encoding, and namespace management
-- **XML-based RPC Messaging**: Request/response patterns in network automation, RPC error handling, and capability negotiation
-- **SSH Subsystem Architecture**: How protocols tunnel through SSH, implementing custom SSH subsystems with Paramiko
-- **IETF Standards Implementation**: Practical application of industry standards in production code
-
-### Backend Architecture
-
-- **Protocol Abstraction Layers**: Designing clean interfaces between transport (SSH), protocol (NETCONF), and business logic (SDN controller)
-- **YAML-Based Configuration Management**: Using declarative configuration for device inventories with environment-specific overrides
-- **Distributed System Error Handling**: Managing network timeouts, connection failures, and device unavailability gracefully
-- **RESTful API Design**: Proper HTTP semantics for network operations (POST for discovery, GET for status, POST for configuration)
-- **Logging and Debugging**: Structured logging for distributed systems spanning multiple network devices
-
-### DevOps & Infrastructure
-
-- **Multi-Container Docker Orchestration**: Service dependencies, bridge networking, and environment-based configuration
-- **Environment-Based Configuration**: Switching between local development and containerized environments seamlessly
-- **Custom Test Infrastructure**: Building protocol-compliant simulators for automated testing
-- **CI/CD Considerations**: Designing testable network automation tools without hardware dependencies
-- **Container Networking**: Service discovery, hostname resolution, and port exposure strategies
-
-### System Design Patterns
-
-- **Three-Tier Architecture**: Clear separation between presentation (React), application (Flask), and integration (NETCONF) layers
-- **Separation of Concerns**: NetconfClient handles protocol, SDNController handles orchestration, Routes handle HTTP
-- **Stateless API Design**: Each API request is self-contained, enabling horizontal scalability
-- **Configuration Validation Patterns**: Dual validation (frontend for UX, backend for security)
-- **Error Propagation**: Designing error flows from device layer through API to UI
-
-### Industry Standards & Best Practices
-
-- **Software-Defined Networking (SDN)**: Controller architecture, southbound protocols, and network abstraction
-- **Network Automation**: Moving from manual CLI to programmatic configuration management
-- **IETF Standards**: Practical implementation of RFC 6241 (NETCONF), YANG models, and standard namespaces
-- **Multi-Vendor Management**: Vendor-agnostic approaches using industry standards rather than proprietary APIs
-- **Infrastructure as Code**: Treating network configuration as code with version control and testing
-
----
 
 ## Project Structure
 
@@ -608,7 +470,7 @@ Multi-Vendor-SDN-Controller/
 
 ---
 
-## Future Enhancements
+<!-- ## Future Enhancements
 
 ### Scalability
 
@@ -642,13 +504,4 @@ Multi-Vendor-SDN-Controller/
 - [ ] **Grafana Dashboards**: Visualization of device health, API performance, and system metrics
 - [ ] **ELK Stack Integration**: Centralized logging for distributed system debugging
 - [ ] **Health Check Endpoints**: Kubernetes-ready liveness and readiness probes
-
----
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-
-*Built to demonstrate modern network automation, protocol-level implementation expertise, and production-grade software engineering practices.*
+ -->
