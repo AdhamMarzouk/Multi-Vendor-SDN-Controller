@@ -41,7 +41,18 @@ class TestEndToEnd:
         assert 'capabilities' in data
         assert len(data['capabilities']) > 0
         assert 'running_config' in data
-        assert '<?xml' in data['running_config']  # Verify it's XML
+
+        # Verify it's JSON with interfaces
+        assert 'interfaces' in data['running_config']
+        assert isinstance(data['running_config']['interfaces'], list)
+        assert len(data['running_config']['interfaces']) > 0
+
+        # Verify interface structure
+        first_interface = data['running_config']['interfaces'][0]
+        assert 'name' in first_interface
+        assert 'type' in first_interface
+        assert 'enabled' in first_interface
+
         assert 'device_info' in data
 
         assert 'ip' in data['device_info']

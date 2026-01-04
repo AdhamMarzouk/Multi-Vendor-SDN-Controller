@@ -56,8 +56,10 @@ class sdn_controller:
 
         client.connect()
         capabilities = client.get_capabilities()
-        running_config = client.get_config(source='running')
+        running_config_xml = client.get_config(source='running')
         client.close()
+
+        running_config = self._parse_running_config(running_config_xml)
 
         return {
             'hostname': hostname,
@@ -129,4 +131,59 @@ class sdn_controller:
 </config>'''
 
         return config_xml
+
+    def _parse_running_config(self, xml_string):
+        """Parse NETCONF XML running config and extract interface information."""
+        import xml.etree.ElementTree as ET
+
+        # Define namespaces
+        namespaces = {
+            'if': 'urn:ietf:params:xml:ns:yang:ietf-interfaces',
+            'ip': 'urn:ietf:params:xml:ns:yang:ietf-ip'
+        }
+
+        try:
+            root = ET.fromstring(xml_string)
+            interfaces = []
+
+            # Find all interface elements
+            for interface_elem in root.findall('.//if:interface', namespaces):
+                # Extract name
+                name = interface_elem.findtext('if:name', namespaces=namespaces)
+                if not name:
+                    continue
+
+                # Extract type (remove namespace prefix if present)
+                type_text = interface_elem.findtext('if:type', namespaces=namespaces)
+                if_type = type_text.split(':')[1] if type_text and ':' in type_text else type_text
+
+                # Extract enabled status (convert to boolean)
+                enabled_text = interface_elem.findtext('if:enabled', namespaces=namespaces)
+                enabled = enabled_text.lower() == 'true' if enabled_text else False
+
+                # Build interface dict
+                interface_data = {
+                    'name': name,
+                    'type': if_type,
+                    'enabled': enabled
+                }
+
+                # Extract IPv4 configuration if present
+                ipv4_elem = interface_elem.find('ip:ipv4/ip:address', namespaces)
+                if ipv4_elem is not None:
+                    ip_addr = ipv4_elem.findtext('ip:ip', namespaces=namespaces)
+                    netmask = ipv4_elem.findtext('ip:netmask', namespaces=namespaces)
+
+                    if ip_addr:
+                        interface_data['ip'] = ip_addr
+                    if netmask:
+                        interface_data['netmask'] = netmask
+
+                interfaces.append(interface_data)
+
+            return {'interfaces': interfaces}
+
+        except Exception as e:
+            # Return empty interfaces with error info on parsing failure
+            return {'interfaces': [], 'parse_error': str(e)}
 
