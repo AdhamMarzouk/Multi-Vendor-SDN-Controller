@@ -4,3 +4,4 @@ pytest
 ncclient
 paramiko
 pyyaml
+flask-cors
